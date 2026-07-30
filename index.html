@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Localizador de Lojas - Rota & Informações</title>
+  <meta name="description" content="Localize, encontre e navegue rapidamente para todas as lojas com integração direta ao Google Maps e Waze.">
+  
+  <!-- Fontes do Google (Outfit & Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS para o Mapa -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-icon">
+          <i data-lucide="store"></i>
+        </div>
+        <div>
+          <h1>Rede de Lojas</h1>
+          <p class="subtitle"><span id="total-lojas-count">0</span> lojas cadastradas</p>
+        </div>
+      </div>
+      
+      <div class="header-actions">
+        <button id="btn-gps" class="btn-icon" title="Lojas Mais Próximas (GPS)" aria-label="Usar GPS">
+          <i data-lucide="navigation"></i>
+        </button>
+        <button id="btn-theme" class="btn-icon" title="Alternar Tema" aria-label="Alternar Tema">
+          <i data-lucide="sun"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Search Bar -->
+    <div class="search-box">
+      <i data-lucide="search" class="search-icon"></i>
+      <input type="text" id="search-input" placeholder="Buscar por Nome, N°, Cidade, Bairro, Supervisor ou CNPJ..." autocomplete="off">
+      <button id="btn-clear-search" class="btn-clear hidden" aria-label="Limpar Busca">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <!-- Quick Navigation Tabs -->
+    <nav class="view-tabs">
+      <button class="tab-btn active" data-view="list">
+        <i data-lucide="list"></i> Lista
+      </button>
+      <button class="tab-btn" data-view="map">
+        <i data-lucide="map-pin"></i> Mapa
+      </button>
+      <button class="tab-btn" data-view="filters">
+        <i data-lucide="sliders"></i> Filtros <span id="filter-badge" class="badge-count hidden">0</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="app-content">
+
+    <!-- Active Filters Summary Chip Container -->
+    <div id="active-filters-bar" class="active-filters-bar hidden">
+      <span class="active-filters-label">Filtros:</span>
+      <div id="chips-wrapper" class="chips-wrapper"></div>
+      <button id="btn-reset-all-filters" class="btn-text-danger">Limpar todos</button>
+    </div>
+
+    <!-- VIEW 1: LIST OF STORES -->
+    <section id="view-list" class="view-section active">
+      <div id="gps-status-banner" class="gps-banner hidden">
+        <i data-lucide="compass"></i>
+        <span id="gps-status-text">Ordenado por proximidade GPS</span>
+        <button id="btn-clear-gps" class="btn-close-banner">&times;</button>
+      </div>
+
+      <div id="stores-grid" class="stores-grid">
+        <!-- Cards loaded dynamically -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state hidden">
+        <div class="empty-icon"><i data-lucide="search-x"></i></div>
+        <h3>Nenhuma loja encontrada</h3>
+        <p>Tente ajustar a sua pesquisa ou os filtros selecionados.</p>
+        <button id="btn-reset-search" class="btn-primary">Resetar Filtros</button>
+      </div>
+    </section>
+
+    <!-- VIEW 2: INTERACTIVE MAP -->
+    <section id="view-map" class="view-section">
+      <div id="map-container" class="map-container"></div>
+    </section>
+
+    <!-- VIEW 3: FILTERS DRAWER / PANEL -->
+    <section id="view-filters" class="view-section">
+      <div class="filters-card">
+        <h2><i data-lucide="filter"></i> Filtrar Lojas</h2>
+        
+        <div class="filter-group">
+          <label for="filter-status"><i data-lucide="check-circle-2"></i> Status da Loja</label>
+          <select id="filter-status">
+            <option value="">Todas (Abertas, Fechadas, ADM)</option>
+            <option value="SIM" selected>Somente Abertas (SIM)</option>
+            <option value="OUTROS">Outros / Fechadas</option>
+            <option value="ADM">Administrativo (ADM)</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-supervisor"><i data-lucide="user-check"></i> Supervisor</label>
+          <select id="filter-supervisor">
+            <option value="">Todos os Supervisores</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-municipio"><i data-lucide="map"></i> Município / Cidade</label>
+          <select id="filter-municipio">
+            <option value="">Todos os Municípios</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-regiao"><i data-lucide="globe"></i> Região</label>
+          <select id="filter-regiao">
+            <option value="">Todas as Regiões</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-tipo-loja"><i data-lucide="shopping-bag"></i> Tipo de Loja</label>
+          <select id="filter-tipo-loja">
+            <option value="">Todos os Tipos</option>
+          </select>
+        </div>
+
+        <div class="filter-actions">
+          <button id="btn-apply-filters" class="btn-primary btn-block">Ver Resultados</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- STORE DETAILS MODAL -->
+  <div id="store-modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button id="btn-close-modal" class="modal-close" aria-label="Fechar Modal">&times;</button>
+      
+      <div class="modal-header">
+        <div class="store-badge-row">
+          <span id="modal-store-num" class="num-badge">Loja #0</span>
+          <span id="modal-store-status" class="status-badge">ABERTA</span>
+        </div>
+        <h2 id="modal-store-name">Nome da Loja</h2>
+        <p id="modal-store-city" class="modal-subtitle">Cidade - UF</p>
+      </div>
+
+      <div class="modal-body">
+        <!-- Main Quick Nav Buttons -->
+        <div class="modal-nav-buttons">
+          <a id="modal-gmaps-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn-action btn-gmaps">
+            <i data-lucide="map-pin"></i> Google Maps
+          </a>
+          <a id="modal-waze-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn-action btn-waze">
+            <i data-lucide="navigation-2"></i> Waze
+          </a>
+        </div>
+
+        <div class="modal-details-grid">
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="map-pin"></i> Endereço Completo</span>
+            <span id="modal-address" class="detail-val"></span>
+            <button class="btn-copy" data-copy-target="modal-address"><i data-lucide="copy"></i> Copiar Endereço</button>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="user"></i> Supervisor Responsável</span>
+            <span id="modal-supervisor" class="detail-val"></span>
+            <a id="modal-supervisor-email" href="#" class="link-contact hidden"><i data-lucide="mail"></i> Enviar E-mail</a>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="phone"></i> Telefone Corporativo</span>
+            <span id="modal-phone" class="detail-val"></span>
+            <a id="modal-phone-call" href="#" class="btn-call hidden"><i data-lucide="phone-call"></i> Ligar</a>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="stethoscope"></i> Veterinário(a) / Contato</span>
+            <span id="modal-vet" class="detail-val"></span>
+            <span id="modal-vet-phone" class="detail-val font-mono"></span>
+            <a id="modal-vet-call" href="#" class="btn-call hidden"><i data-lucide="phone"></i> Ligar Vet</a>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="file-text"></i> CNPJ</span>
+            <span id="modal-cnpj" class="detail-val font-mono"></span>
+            <button class="btn-copy" data-copy-target="modal-cnpj"><i data-lucide="copy"></i> Copiar CNPJ</button>
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label"><i data-lucide="building"></i> Auditor & Tipo de Operação</span>
+            <span id="modal-auditor" class="detail-val"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification for Copying -->
+  <div id="toast" class="toast hidden">Copiado para a área de transferência!</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Stores Dataset -->
+  <script src="data/lojas_data.js"></script>
+
+  <!-- App Core Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
