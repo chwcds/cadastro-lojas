@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Helper to extract clean store number (e.g., "050", "loja 50", "#050" -> "50")
+  // Helper to extract clean store number (e.g., "loja 126", "#126", "050" -> "126" or "50")
   function extractCleanNumber(str) {
     if (!str) return '';
     let q = str.toLowerCase().trim();
@@ -85,7 +85,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (/^\d+$/.test(q)) {
       return String(parseInt(q, 10));
     }
-    return q;
+    return '';
+  }
+
+  // Helper to check if store matches active select dropdown filters
+  function matchesDropdownFilters(store, { statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal }) {
+    if (statusVal) {
+      if (statusVal === 'SIM' && store.aberta !== 'SIM') return false;
+      if (statusVal === 'OUTROS' && store.aberta === 'SIM') return false;
+      if (statusVal === 'ADM' && store.aberta !== 'ADM') return false;
+    }
+    if (supervisorVal && store.supervisor !== supervisorVal) return false;
+    if (municipioVal && store.municipio !== municipioVal) return false;
+    if (regiaoVal && store.regiao !== regiaoVal) return false;
+    if (tipoVal && store.tipo_loja !== tipoVal) return false;
+
+    return true;
   }
 
   // --------------------------------------------------------------------------
@@ -94,13 +109,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyFilters() {
     const rawQuery = searchInput.value.toLowerCase().trim();
     const cleanNum = extractCleanNumber(rawQuery);
-    const isSearchingNumber = /^\d+$/.test(cleanNum);
 
     const statusVal = filterStatus.value;
     const supervisorVal = filterSupervisor.value;
     const municipioVal = filterMunicipio.value;
     const regiaoVal = filterRegiao.value;
     const tipoVal = filterTipoLoja.value;
+
+    const dropdownFilterObj = { statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal };
 
     let activeFilterCount = 0;
     if (statusVal) activeFilterCount++;
@@ -118,72 +134,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateFilterChips({ statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal });
 
+    // EXACT MATCH RULE: If user typed a store number (e.g., "126", "loja 126", "#126", "050")
+    // and a store with that number exists, return ONLY that exact store!
+    if (cleanNum) {
+      const exactStoreMatch = stores.find(s => String(s.num || '').trim() === cleanNum);
+      if (exactStoreMatch && matchesDropdownFilters(exactStoreMatch, dropdownFilterObj)) {
+        filteredStores = [exactStoreMatch];
+        renderStoresList();
+        if (map) updateMapMarkers();
+        return;
+      }
+    }
+
+    // Standard Search Filter
     filteredStores = stores.filter(store => {
-      const numStr = String(store.num || '').trim();
-      const isExactNum = (numStr === cleanNum);
-      store._isExactNum = isExactNum;
+      // 1. Check select filters
+      if (!matchesDropdownFilters(store, dropdownFilterObj)) {
+        return false;
+      }
 
-      // 1. Text Query Search (including Store Number)
+      // 2. Text Query Search
       if (rawQuery) {
-        if (!isExactNum) {
-          // If searching number, match store number exactly or partially, or check text
-          const numMatch = isSearchingNumber && (numStr === cleanNum || numStr.includes(cleanNum));
+        const numStr = String(store.num || '').trim();
+        const textToSearch = [
+          `loja ${numStr}`,
+          `loja #${numStr}`,
+          `#${numStr}`,
+          numStr,
+          store.loja,
+          store.municipio,
+          store.bairro,
+          store.endereco,
+          store.supervisor,
+          store.cnpj,
+          store.veterinario
+        ].join(' ').toLowerCase();
 
-          const textToSearch = [
-            `loja ${numStr}`,
-            `loja #${numStr}`,
-            `loja${numStr}`,
-            `#${numStr}`,
-            numStr,
-            numStr.padStart(2, '0'),
-            numStr.padStart(3, '0'),
-            store.loja,
-            store.municipio,
-            store.bairro,
-            store.endereco,
-            store.supervisor,
-            store.cnpj,
-            store.veterinario
-          ].join(' ').toLowerCase();
-
-          const matchesText = textToSearch.includes(rawQuery) || textToSearch.includes(cleanNum);
-
-          if (!numMatch && !matchesText) {
-            return false;
-          }
+        if (!textToSearch.includes(rawQuery)) {
+          return false;
         }
       }
-
-      // 2. Status Filter
-      if (statusVal) {
-        if (statusVal === 'SIM' && store.aberta !== 'SIM') return false;
-        if (statusVal === 'OUTROS' && store.aberta === 'SIM') return false;
-        if (statusVal === 'ADM' && store.aberta !== 'ADM') return false;
-      }
-
-      // 3. Supervisor
-      if (supervisorVal && store.supervisor !== supervisorVal) return false;
-
-      // 4. Municipio
-      if (municipioVal && store.municipio !== municipioVal) return false;
-
-      // 5. Regiao
-      if (regiaoVal && store.regiao !== regiaoVal) return false;
-
-      // 6. Tipo Loja
-      if (tipoVal && store.tipo_loja !== tipoVal) return false;
 
       return true;
     });
 
-    // If query exists, prioritize exact store number match to the VERY FIRST place
-    if (rawQuery) {
-      filteredStores.sort((a, b) => {
-        if (a._isExactNum && !b._isExactNum) return -1;
-        if (!a._isExactNum && b._isExactNum) return 1;
-        return 0;
-      });
-    } else if (userLocation) {
+    if (userLocation && !rawQuery) {
       sortStoresByDistance();
     }
 
