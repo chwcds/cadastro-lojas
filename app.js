@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function extractCleanNumber(str) {
     if (!str) return '';
     let q = str.toLowerCase().trim();
-    q = q.replace(/^(loja|lj)\s*#?/i, '').replace(/^#/, '').trim();
+    q = q.replace(/^(loja|lj)\s*#?/gi, '').replace(/^#/, '').trim();
     if (/^\d+$/.test(q)) {
       return String(parseInt(q, 10));
     }
@@ -134,19 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateFilterChips({ statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal });
 
-    // EXACT MATCH RULE: If user typed a store number (e.g., "126", "loja 126", "#126", "050")
-    // and a store with that number exists, return ONLY that exact store!
+    // STRICT NUMBER SEARCH RULE:
+    // If user entered a store number (e.g. "126", "loja 126", "#126", "050"),
+    // search EXCLUSIVELY by Store Number (`store.num`). Do not match CNPJ or addresses.
     if (cleanNum) {
       const exactStoreMatch = stores.find(s => String(s.num || '').trim() === cleanNum);
       if (exactStoreMatch && matchesDropdownFilters(exactStoreMatch, dropdownFilterObj)) {
         filteredStores = [exactStoreMatch];
-        renderStoresList();
-        if (map) updateMapMarkers();
-        return;
+      } else {
+        filteredStores = []; // No store with this number exists
       }
+      renderStoresList();
+      if (map) updateMapMarkers();
+      return;
     }
 
-    // Standard Search Filter
+    // Standard Text Search Filter (City, Store Name, Supervisor, Bairro, Address, CNPJ)
     filteredStores = stores.filter(store => {
       // 1. Check select filters
       if (!matchesDropdownFilters(store, dropdownFilterObj)) {
