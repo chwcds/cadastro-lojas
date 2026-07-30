@@ -113,16 +113,13 @@ body {
   gap: 12px;
 }
 
-.brand-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+.brand-logo-img {
+  height: 44px;
+  width: auto;
+  max-width: 120px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .brand h1 {
@@ -711,7 +708,6 @@ body {
 
 .modal-header {
   margin-bottom: 20px;
-
 }
 
 .store-badge-row {
@@ -769,7 +765,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-
 }
 
 .detail-label {

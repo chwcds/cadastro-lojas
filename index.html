@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Localizador de Lojas - Rota & Informações</title>
-  <meta name="description" content="Localize, encontre e navegue rapidamente para todas as lojas com integração direta ao Google Maps e Waze.">
+  <title>Supermercados BH - Localizador de Lojas</title>
+  <meta name="description" content="Localize, encontre e navegue rapidamente para todas as lojas dos Supermercados BH com rotas diretas no Google Maps.">
   
   <!-- PWA & Mobile App Meta Tags -->
-  <link rel="manifest" href="manifest.json?v=1.0.5">
-  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=1.0.5">
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=1.0.5">
-  <meta name="theme-color" content="#1d4ed8">
+  <link rel="manifest" href="manifest.json?v=1.0.6">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=1.0.6">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=1.0.6">
+  <meta name="theme-color" content="#facc15">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -27,7 +27,7 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <link rel="stylesheet" href="styles.css?v=1.0.5">
+  <link rel="stylesheet" href="styles.css?v=1.0.6">
 </head>
 <body>
 
@@ -35,11 +35,9 @@
   <header class="app-header">
     <div class="header-top">
       <div class="brand">
-        <div class="brand-icon">
-          <i data-lucide="store"></i>
-        </div>
+        <img src="logo.png?v=1.0.6" alt="Supermercados BH" class="brand-logo-img">
         <div>
-          <h1>Rede de Lojas</h1>
+          <h1>Supermercados BH</h1>
           <p class="subtitle"><span id="total-lojas-count">0</span> lojas cadastradas</p>
         </div>
       </div>
@@ -237,9 +235,9 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
   <!-- Stores Dataset with cache buster -->
-  <script src="data/lojas_data.js?v=1.0.5"></script>
+  <script src="data/lojas_data.js?v=1.0.6"></script>
 
   <!-- App Core Logic with cache buster -->
-  <script src="app.js?v=1.0.5"></script>
+  <script src="app.js?v=1.0.6"></script>
 </body>
 </html>
