@@ -81,7 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. Filter & Search Logic
   // --------------------------------------------------------------------------
   function applyFilters() {
-    const query = searchInput.value.toLowerCase().trim();
+    const rawQuery = searchInput.value.toLowerCase().trim();
+    // Normalize search query (remove #, "loja", "lj")
+    const cleanNumQuery = rawQuery.replace(/^(loja|lj)\s*#?/i, '').replace(/^#/, '').trim();
+
     const statusVal = filterStatus.value;
     const supervisorVal = filterSupervisor.value;
     const municipioVal = filterMunicipio.value;
@@ -105,11 +108,40 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFilterChips({ statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal });
 
     filteredStores = stores.filter(store => {
-      // 1. Text Query Search
-      if (query) {
+      // 1. Text Query Search (including Store Number)
+      if (rawQuery) {
+        const numStr = String(store.num || '').trim();
+        const numPadded2 = numStr.padStart(2, '0');
+        const numPadded3 = numStr.padStart(3, '0');
+
+        // Check exact or partial store number match
+        const matchesNum = (
+          numStr === rawQuery ||
+          numStr === cleanNumQuery ||
+          numPadded2 === cleanNumQuery ||
+          numPadded3 === cleanNumQuery ||
+          `loja ${numStr}` === rawQuery ||
+          `loja${numStr}` === rawQuery ||
+          `#${numStr}` === rawQuery ||
+          `lj ${numStr}` === rawQuery ||
+          `lj${numStr}` === rawQuery
+        );
+
+        if (matchesNum) {
+          store._exactNumMatch = true;
+        } else {
+          store._exactNumMatch = false;
+        }
+
         const textToSearch = [
+          `loja ${numStr}`,
+          `loja #${numStr}`,
+          `loja${numStr}`,
+          `#${numStr}`,
+          numStr,
+          numPadded2,
+          numPadded3,
           store.loja,
-          store.num,
           store.municipio,
           store.bairro,
           store.endereco,
@@ -118,9 +150,11 @@ document.addEventListener('DOMContentLoaded', () => {
           store.veterinario
         ].join(' ').toLowerCase();
 
-        if (!textToSearch.includes(query)) {
+        if (!matchesNum && !textToSearch.includes(rawQuery) && !textToSearch.includes(cleanNumQuery)) {
           return false;
         }
+      } else {
+        store._exactNumMatch = false;
       }
 
       // 2. Status Filter
@@ -145,8 +179,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     });
 
-    // If GPS is active, sort by distance
-    if (userLocation) {
+    // If exact store number match or query, sort exact store number matches to top
+    if (rawQuery) {
+      filteredStores.sort((a, b) => {
+        if (a._exactNumMatch && !b._exactNumMatch) return -1;
+        if (!a._exactNumMatch && b._exactNumMatch) return 1;
+        return 0;
+      });
+    } else if (userLocation) {
       sortStoresByDistance();
     }
 
@@ -217,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
       emptyState.classList.add('hidden');
     }
 
-    // Render cards (virtualized / capped at first 100 for fast UI response, or all)
+    // Render cards
     const storeSlice = filteredStores.slice(0, 150);
 
     storeSlice.forEach(store => {
@@ -276,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Default center on Minas Gerais (Belo Horizonte)
     map = L.map('map-container').setView([-19.9167, -43.9345], 10);
 
-    // OpenStreetMap Tiles (Free, crisp, no API key)
+    // OpenStreetMap Tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
