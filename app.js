@@ -77,13 +77,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Helper to extract clean store number (e.g., "050", "loja 50", "#050" -> "50")
+  function extractCleanNumber(str) {
+    if (!str) return '';
+    let q = str.toLowerCase().trim();
+    q = q.replace(/^(loja|lj)\s*#?/i, '').replace(/^#/, '').trim();
+    if (/^\d+$/.test(q)) {
+      return String(parseInt(q, 10));
+    }
+    return q;
+  }
+
   // --------------------------------------------------------------------------
   // 3. Filter & Search Logic
   // --------------------------------------------------------------------------
   function applyFilters() {
     const rawQuery = searchInput.value.toLowerCase().trim();
-    // Normalize search query (remove #, "loja", "lj")
-    const cleanNumQuery = rawQuery.replace(/^(loja|lj)\s*#?/i, '').replace(/^#/, '').trim();
+    const cleanNum = extractCleanNumber(rawQuery);
+    const isSearchingNumber = /^\d+$/.test(cleanNum);
 
     const statusVal = filterStatus.value;
     const supervisorVal = filterSupervisor.value;
@@ -108,53 +119,39 @@ document.addEventListener('DOMContentLoaded', () => {
     updateFilterChips({ statusVal, supervisorVal, municipioVal, regiaoVal, tipoVal });
 
     filteredStores = stores.filter(store => {
+      const numStr = String(store.num || '').trim();
+      const isExactNum = (numStr === cleanNum);
+      store._isExactNum = isExactNum;
+
       // 1. Text Query Search (including Store Number)
       if (rawQuery) {
-        const numStr = String(store.num || '').trim();
-        const numPadded2 = numStr.padStart(2, '0');
-        const numPadded3 = numStr.padStart(3, '0');
+        if (!isExactNum) {
+          // If searching number, match store number exactly or partially, or check text
+          const numMatch = isSearchingNumber && (numStr === cleanNum || numStr.includes(cleanNum));
 
-        // Check exact or partial store number match
-        const matchesNum = (
-          numStr === rawQuery ||
-          numStr === cleanNumQuery ||
-          numPadded2 === cleanNumQuery ||
-          numPadded3 === cleanNumQuery ||
-          `loja ${numStr}` === rawQuery ||
-          `loja${numStr}` === rawQuery ||
-          `#${numStr}` === rawQuery ||
-          `lj ${numStr}` === rawQuery ||
-          `lj${numStr}` === rawQuery
-        );
+          const textToSearch = [
+            `loja ${numStr}`,
+            `loja #${numStr}`,
+            `loja${numStr}`,
+            `#${numStr}`,
+            numStr,
+            numStr.padStart(2, '0'),
+            numStr.padStart(3, '0'),
+            store.loja,
+            store.municipio,
+            store.bairro,
+            store.endereco,
+            store.supervisor,
+            store.cnpj,
+            store.veterinario
+          ].join(' ').toLowerCase();
 
-        if (matchesNum) {
-          store._exactNumMatch = true;
-        } else {
-          store._exactNumMatch = false;
+          const matchesText = textToSearch.includes(rawQuery) || textToSearch.includes(cleanNum);
+
+          if (!numMatch && !matchesText) {
+            return false;
+          }
         }
-
-        const textToSearch = [
-          `loja ${numStr}`,
-          `loja #${numStr}`,
-          `loja${numStr}`,
-          `#${numStr}`,
-          numStr,
-          numPadded2,
-          numPadded3,
-          store.loja,
-          store.municipio,
-          store.bairro,
-          store.endereco,
-          store.supervisor,
-          store.cnpj,
-          store.veterinario
-        ].join(' ').toLowerCase();
-
-        if (!matchesNum && !textToSearch.includes(rawQuery) && !textToSearch.includes(cleanNumQuery)) {
-          return false;
-        }
-      } else {
-        store._exactNumMatch = false;
       }
 
       // 2. Status Filter
@@ -179,11 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     });
 
-    // If exact store number match or query, sort exact store number matches to top
+    // If query exists, prioritize exact store number match to the VERY FIRST place
     if (rawQuery) {
       filteredStores.sort((a, b) => {
-        if (a._exactNumMatch && !b._exactNumMatch) return -1;
-        if (!a._exactNumMatch && b._exactNumMatch) return 1;
+        if (a._isExactNum && !b._isExactNum) return -1;
+        if (!a._isExactNum && b._isExactNum) return 1;
         return 0;
       });
     } else if (userLocation) {
