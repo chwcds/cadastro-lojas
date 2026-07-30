@@ -1,21 +1,21 @@
 {
-  "name": "Localizador de Lojas BH",
+  "name": "Supermercados BH - Lojas",
   "short_name": "Lojas BH",
-  "description": "Localize e encontre rotas no Google Maps para todas as 563 lojas",
+  "description": "Localize e encontre rotas no Google Maps para todas as 563 lojas dos Supermercados BH",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1d4ed8",
+  "background_color": "#F7E801",
+  "theme_color": "#F7E801",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192.png?v=1.0.7",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512.png?v=1.0.7",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
